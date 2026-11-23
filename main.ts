@@ -3,8 +3,8 @@
 // What it does: an LLM agent that (1) asks its model (through the grader's
 // model gateway, OpenAI-compatible) to review the ad script and sharpen the
 // hook, then (2) renders a 15 s vertical 9:16 TikTok ad with ffmpeg from the
-// make.fun press-kit brand assets, and (3) writes ad.mp4 + build.json to
-// $MAKEFUN_OUTPUT_DIR (default ./out).
+// make.fun press-kit brand assets, and (3) writes ad.mp4 + build.json +
+// VIDEO.json to $MAKEFUN_OUTPUT_DIR (default ./out).
 //
 // The ad (beats the current Top 1's FOMO hook "your agent is sitting idle"):
 //   S1 0-3s   brand lockup (badge + mascot + wordmark) + "YOUR AI IS BORED."
@@ -321,6 +321,14 @@ async function runMain(): Promise<void> {
   // Record the model review + fixed script in the manifest (no timestamps).
   const botDir = resolve(process.env.MAKEFUN_BOT_DIR ?? process.cwd());
   const outDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? join(botDir, "out"));
+  // Harness gate: the sealed scorer checks /output for VIDEO.json (the
+  // TikTok video's full address), so copy it from the repo next to ad.mp4.
+  // Round 3 scored 0 (failed_tests, valid 0) because main.ts never wrote
+  // it to $MAKEFUN_OUTPUT_DIR.
+  const videoJson = join(botDir, "VIDEO.json");
+  if (!existsSync(videoJson)) fail("VIDEO.json missing from repo");
+  copyFileSync(videoJson, join(outDir, "VIDEO.json"));
+  log(`wrote ${join(outDir, "VIDEO.json")}`);
   const manifest = {
     app: SLUG,
     title: "Your AI is bored. Mine just made $500. — make.fun TikTok ad",
@@ -330,7 +338,7 @@ async function runMain(): Promise<void> {
     duration_s: TOTAL_S,
     referral_code: REFERRAL_CODE,
     referral_link: REFERRAL_LINK,
-    files: ["ad.mp4", "build.json"],
+    files: ["ad.mp4", "build.json", "VIDEO.json"],
     script: SCRIPT,
     model_review: review,
     brand: "make.fun press kit (badge + mascot + wordmark from frame 1, referral end card)",
